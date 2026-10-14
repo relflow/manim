@@ -30,7 +30,7 @@
       "page": "getting-started.qmd",
       "scene": "FirstModel",
       "level": "intro",
-      "youtube_id": null,
+      "youtube_id": "cXzYAGz7SEE",
       "beats": [
         {
           "title": "One payment, one question",
@@ -85,7 +85,7 @@
       "page": "tutorials/transaction-history.qmd",
       "scene": "TransactionHistory",
       "level": "intro",
-      "youtube_id": null,
+      "youtube_id": "kJjHS8eLbaQ",
       "beats": [
         {
           "title": "The payment has a past",
@@ -142,7 +142,7 @@
       "page": "core-concepts/binding-data.qmd",
       "scene": "BindingData",
       "level": "intro",
-      "youtube_id": null,
+      "youtube_id": "HlEWbqo4ubQ",
       "beats": [
         {
           "title": "Names connect schema and records",
@@ -198,7 +198,7 @@
       "page": "guides/lightning.qmd",
       "scene": "Training",
       "level": "intro",
-      "youtube_id": null,
+      "youtube_id": "BUtpW3Mwvy8",
       "beats": [
         {
           "title": "Learn from earlier payments",
@@ -255,7 +255,7 @@
       "page": "guides/prediction-output.qmd",
       "scene": "Predictions",
       "level": "intro",
-      "youtube_id": null,
+      "youtube_id": "50IwH5AHt-I",
       "beats": [
         {
           "title": "Ask about an unseen outcome",
@@ -312,7 +312,7 @@
       "page": "core-concepts/model-tree.qmd",
       "scene": "Structure",
       "level": "advanced",
-      "youtube_id": null,
+      "youtube_id": "DlL2pUBMbfo",
       "beats": [
         {
           "title": "One observation has a tree",
@@ -369,7 +369,7 @@
       "page": "core-concepts/dynamic-masking.qmd",
       "scene": "Masking",
       "level": "advanced",
-      "youtube_id": null,
+      "youtube_id": "MyF7-m2iBZQ",
       "beats": [
         {
           "title": "Visibility and learning are separate choices",
@@ -426,7 +426,7 @@
       "page": "core-concepts/embeddings.qmd",
       "scene": "Embeddings",
       "level": "advanced",
-      "youtube_id": null,
+      "youtube_id": "oeEt2bvrA-I",
       "beats": [
         {
           "title": "Export learned context",
@@ -485,7 +485,7 @@
       "page": "guides/pretraining.qmd",
       "scene": "Pretraining",
       "level": "advanced",
-      "youtube_id": null,
+      "youtube_id": "tc0AmRqTD4U",
       "beats": [
         {
           "title": "Learn from records without task labels",

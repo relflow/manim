@@ -7,3 +7,5 @@ media/
 build/
 dist/
 .DS_Store
+client_secret*.json
+token*.json

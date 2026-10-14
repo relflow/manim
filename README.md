@@ -6,6 +6,9 @@ metadata together. A video build does not train a model, import RelFlow, or
 download model weights. The docs render from their own checkout and consume only
 exported static metadata and transcripts.
 
+Watch the [nine-episode playlist on YouTube](https://www.youtube.com/playlist?list=PLLVRY5EpLiBI).
+These unlisted review uploads include system narration and English captions.
+
 ## The series
 
 `series.json` owns nine new clips, each with four narrated beats:
@@ -129,11 +132,35 @@ The `--check` form compares expected files without writing. The exporter updates
 managed entries, rejects unsafe paths and invalid YouTube IDs, and preserves
 unrelated files. It does not remove old transcripts automatically.
 
-YouTube upload is a later publication step. Upload the reviewed MP4, apply the
-prepared description and captions, then put its actual eleven-character video ID
-in `series.json` or `archive-catalog.json`. Export again and run the docs checks.
-The docs embed published IDs; entries with `youtube_id: null` retain readable
-transcripts without displaying a fabricated player.
+## Upload to YouTube from the CLI
+
+The optional publishing command uses Google's official Python SDK. It uploads
+the nine rendered guides to `@relflow-ai` as unlisted videos, adds the prepared
+captions and thumbnails, and maintains an ordered unlisted playlist:
+
+```sh
+uv sync --locked --extra youtube
+uv run --extra youtube python -m tools.youtube --plan
+uv run --extra youtube python -m tools.youtube \
+  --channel @relflow-ai --client-secrets /private/path/to/desktop-client.json
+```
+
+Create a Google Cloud project with YouTube Data API v3 enabled, configure its
+OAuth app for your Google account, and create a Desktop OAuth client. Keep the
+downloaded client JSON outside this repository. See Google's
+[Desktop OAuth guide](https://developers.google.com/youtube/v3/guides/auth/installed-apps).
+Authorization opens a browser and returns to a local loopback listener; tokens
+stay in memory and are never written to the upload state.
+
+The command verifies the authenticated channel before writing. It saves public
+video IDs and completed upload steps in `dist/youtube-state.json`, so a retry
+reuses completed videos. An interrupted upload without a returned ID stops for
+reconciliation in Studio instead of automatically sending the same file again.
+Use `--no-thumbnails` if custom thumbnails are unavailable for the channel.
+
+Only confirmed video IDs are recorded in `series.json`. Export the docs catalog
+again and run the docs checks to enable their embeds. Historical episode IDs
+remain in `archive-catalog.json` and can be exported after their separate upload.
 
 ## Preserve the original film
 
