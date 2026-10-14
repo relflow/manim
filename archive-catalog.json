@@ -1,0 +1,585 @@
+{
+  "schema": 1,
+  "series": "relflow, Visualized",
+  "target": {
+    "version": "0.2.3",
+    "commit": "5077716",
+    "repository": "https://github.com/relflow/relflow",
+    "state": "historical"
+  },
+  "source_archive": {
+    "repository": "https://github.com/relflow/relflow",
+    "branch": "feature/explainer-video",
+    "commit": "4679d69d9bf15cad1467803c68c3d7f5ecae3cec",
+    "path": "explainer-video/",
+    "local_path": "archive/relflow-0.2.3"
+  },
+  "docs_base": "https://relflow.github.io/docs/",
+  "segments": [
+    {
+      "id": "records-have-shape",
+      "original_slug": "records-have-shape",
+      "number": 1,
+      "title": "Records have shape",
+      "page": "index.qmd",
+      "pages": [
+        "index.qmd"
+      ],
+      "original_pages": [
+        "index.qmd"
+      ],
+      "scene": "Hook",
+      "module": "s01_hook",
+      "source": "archive/relflow-0.2.3/s01_hook.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "3:14",
+      "youtube_title": "Records have shape | relflow, Visualized #1",
+      "description": "Most data worth learning from has shape: lists inside records. relflow is a model factory for structured data: describe the shape of one record and it builds the PyTorch model that reads it. The series road map.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Records have shape\n\nThis is relflow: a model factory for structured data. You describe the shape of one record, and it builds the PyTorch model that reads it. In this series, we'll take it apart, one short episode at a time, and watch every piece work.\n\nMost data worth learning from has shape. A support ticket, with its thread of messages. A transfer, between two parties. A sensor, with its readings. Each is a record with a list inside it, and a value we'd like to know.\n\nWe'll follow one example through the series: a customer of an online store, written as YAML. They've been a customer for 420 days. They've placed orders, and every order has its own list of line items: a product SKU, and how many were bought. The last two fields are what we'd like to predict: did this customer leave the next month, and how much did they spend?\n\nThe usual move is to flatten it: one row per customer, one column per hand-made feature. Count the orders. Count the items. Average the quantities. Count the distinct products. But every column throws something away. Once the quantities are averaged, you can no longer ask which product was bought five at a time, or whether it was in the newest order. Which value belongs to which item, and which item to which order: that structure is gone.\n\nrelflow takes the opposite road. You describe the record's shape once, in Python, and that description is the architecture. Keywords name the fields, and a type says what each value means. A Branch marks a repeated collection, with room for 64 orders, each with up to 16 line items. And mask equals True marks an answer: a value the model will learn to predict, but never gets to see.\n\nFrom that tree, relflow builds the network. Every input field gets a small embedding module that turns its values into vectors. Every branch, and the root, gets its own transformer encoder, which reads a collection and passes a summary up to its parent. And every target gets a decoder, which reads the summaries back down the tree to make its prediction. With the medium preset, this one schema becomes a network of twelve million parameters.\n\nEach episode stands on its own, and together they follow one batch of records through that whole machine. First, the short version: the whole thing in three lines of code. Then the pieces. How nested Arrow data becomes rectangles of tensors, and why a null is not a zero. How numbers, labels, identifiers, time and text each become vectors. What happens inside a branch, why padding costs nothing, and why softmax attention can't count. How a decoder asks the tree a question, how one mask mechanism makes targets, dropout and pretraining, and what happens before and after the model, what it costs in time and memory, and what relflow's own proofs show. Every grid, curve and number in the series comes from running relflow itself, on the computer that rendered it.\n"
+    },
+    {
+      "id": "three-lines",
+      "original_slug": "three-lines",
+      "number": 2,
+      "title": "Three lines to a trained model",
+      "page": "getting-started.qmd",
+      "pages": [
+        "getting-started.qmd",
+        "guides/lightning.qmd"
+      ],
+      "original_pages": [
+        "getting-started.qmd",
+        "guides/lightning.qmd"
+      ],
+      "scene": "ThreeLines",
+      "module": "s02_three_lines",
+      "source": "archive/relflow-0.2.3/s02_three_lines.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:28",
+      "youtube_title": "Three lines to a trained model | relflow, Visualized #2",
+      "description": "The happy path: load a schema into a model, build a data module, fit. A real run from those three lines, what each training step does, Lightning's four loops, and saving, loading and predicting.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Three lines to a trained model\n\nHere's the whole thing, start to finish. First, the shape of one record: an order with up to eight line items, each with a SKU, a quantity and a price, and one value to predict. Was the order returned? Line one loads that schema into a model. S M is the small preset: it chooses the widths and depths. The batch size and the optimizer travel with the model. Line two wraps the data. A data module takes Arrow tables, Parquet datasets on disk, or Polars frames, and streams them in batches. And line three hands both to Lightning, which runs the training loop. That's it.\n\nHere are those three lines, run for real, on 4,096 synthetic orders. An order comes back if it holds a fragile product bought three or more at a time, a rule the model has to discover. The small preset is about 1.5 million parameters. Six epochs take 12 seconds. After the first epoch, the validation AUC is 0.74. After the second, it's one.\n\nWhat does that third line do? Every step is the same short loop. A batch of Arrow records is encoded into tensors, run forward through the tree, scored with one loss per target, summed, and the optimizer takes a step. Some learning happens outside the gradients, too. While training, vocabularies admit new labels and number fields update their statistics. Validation, testing and prediction only read them, so a score never depends on the data it's scoring.\n\nLightning has four loops, and each reads its own split. Fit trains, and validates after every epoch. Validate and test only score. Predict writes predictions. The stage matters to relflow too: it decides which masks are active and whether fields may learn. Testing our model on two thousand new orders: an AUC of one.\n\nWhen you're done, save the model to a single file. It holds the schema, the weights, and everything the fields learned: vocabularies and normalizers. Load it anywhere, and predict. Predictions come back as an Arrow table, one row per request, with the columns you asked to keep. For each target, a probability, the predicted state, and a flag saying it was inferred. Two things the presets leave to you: a batch size, since they default to one, and an optimizer.\n"
+    },
+    {
+      "id": "schema",
+      "original_slug": "schema",
+      "number": 3,
+      "title": "The schema is the architecture",
+      "page": "core-concepts/model-tree.qmd",
+      "pages": [
+        "core-concepts/model-tree.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/model-tree.qmd"
+      ],
+      "scene": "SchemaIsArchitecture",
+      "module": "s03_schema",
+      "source": "archive/relflow-0.2.3/s03_schema.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:32",
+      "youtube_title": "The schema is the architecture | relflow, Visualized #3",
+      "description": "Addresses, fixed shapes, what each leaf and branch owns, where the parameters live, and the five size presets.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# The schema is the architecture\n\nHere's the schema of a customer model: a customer with orders, each order with its line items, and two values to predict. Let's look closely at that tree. Every node has an address: a path that starts at the root, which is written as a single slash. The root is anonymous, and it always holds exactly one observation. Anything repeated lives in a branch beneath it. So the SKU of a line item lives at slash orders, slash line items, slash SKU. Addresses are how relflow names everything: predictions, metrics, exported embeddings, and even edits to a model that's already trained.\n\nEach branch also fixes a shape. Orders holds up to 64 entries, and each order up to 16 line items. So the tensor for SKU always has the shape: batch, by one root, by 64, by 16, however many items a real customer happens to have. Short lists get padded. Long lists get cut, keeping either the first entries, or the last ones, which is what you want for a history sorted oldest to newest. The shapes are fixed by the schema before a single record arrives.\n\nNow the modules. A leaf owns an embedder, which turns its values into vectors of one shared width, called d model. If the leaf is a target, or if you ask for its embedding, it also owns a decoder. A branch owns an encoder in three parts. First, a layer that lets the fields of the same item talk to each other. Then a stack of transformer layers that runs across the whole collection. And finally a reduction, which boils the collection down to a few vectors for its parent.\n\nHere's where the twelve million parameters of our customer model actually live. Almost all of them are in the three encoders, the root's being the deepest, and in the two decoders. The embedders are tiny. And the SKU embedder is the smallest of all, because its vocabulary is still empty. It will grow as labels arrive, while it trains.\n\nThose sizes come from a preset. relflow ships five, from extra small to extra large. Each one sets the width, the depth of the root and of every branch, the number of attention heads, and how many summary vectors each branch passes to its parent. Our customer model used medium. Anything you set yourself wins, but only at the node where you set it.\n"
+    },
+    {
+      "id": "records-to-rectangles",
+      "original_slug": "records-to-rectangles",
+      "number": 4,
+      "title": "From records to rectangles",
+      "page": "core-concepts/binding-data.qmd",
+      "pages": [
+        "core-concepts/binding-data.qmd",
+        "data-types/branch.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/binding-data.qmd",
+        "data-types/branch.qmd"
+      ],
+      "scene": "RaggedToDense",
+      "module": "s04_ragged",
+      "source": "archive/relflow-0.2.3/s04_ragged.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:17",
+      "youtube_title": "From records to rectangles | relflow, Visualized #4",
+      "description": "How nested Arrow records become dense tensors: offsets and child arrays, one placement rule, head and tail overflow, nested branches, and a state beside every value.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# From records to rectangles\n\nHow does a batch of records become a tensor? Let's follow a real batch. Here are four orders: two items, one item with a missing quantity, no items at all, and five items.\n\nIn memory, Apache Arrow doesn't store lists the way Python does. Every item of every order goes into one long column per field: all the SKUs, back to back, and all the quantities. A separate offsets array says where each order's items start and stop. Order zero owns items zero and one, order one owns item two, order two starts and stops at three, so it's empty, and order three owns the last five.\n\nThe model, though, wants rectangles: in this small example, a grid of four slots per order. So for every item it keeps, relflow computes a single number, its placement in the grid: the parent's position, times the branch length, plus the item's slot within its own list. Item four, for instance, is order three's second item: three times four, plus one, is thirteen. Then every value is scattered to its placement in one vectorized step.\n\nOrder two is empty, so its whole row stays padding. Order three has five items but only four slots. By default relflow keeps the head, the first four, so F11 is dropped. With overflow equals tail it keeps the last four instead, which is what you want for a history that's sorted oldest to newest.\n\nNested branches simply repeat the rule. In the customer model, an order's own placement becomes the parent position for its line items, so every item lands somewhere in a grid of 64 orders by 16 items. And all of it is NumPy over Arrow's buffers: no Python loop ever walks the records one at a time.\n\nAlongside the values, every slot also gets a state. Here's the real state grid relflow produced for the quantities of these four orders. V for a real value, N for the quantity that was explicitly null, and P for padding, where there was no item at all. And the SKUs came out as small integers, looked up in a dictionary that's local to this batch. We'll see later how those meet the model's own vocabulary.\n"
+    },
+    {
+      "id": "null-is-not-zero",
+      "original_slug": "null-is-not-zero",
+      "number": 5,
+      "title": "Null is not zero",
+      "page": "core-concepts/data-types.qmd",
+      "pages": [
+        "core-concepts/data-types.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/data-types.qmd"
+      ],
+      "scene": "ValueState",
+      "module": "s05_state",
+      "source": "archive/relflow-0.2.3/s05_state.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:08",
+      "youtube_title": "Null is not zero | relflow, Visualized #5",
+      "description": "Five value states (valued, null, padded, masked, other) with learned vectors, and a proof of why filling nulls with zero loses information.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Null is not zero\n\nWhy does relflow track a state at all? Because inside a tensor, a zero is just a zero. Take a measurement: one sensor read exactly zero, and another never reported. Fill the null with zero, as so many pipelines do, and these two records become identical, even though they need different answers.\n\nSo relflow keeps two separate inputs for every slot. One is the content: the number, the label, the hash. The other is a state, one of five tokens: valued, null, padded, masked, and a fifth reserved for extensions. Each state has its own learned vector. A field's embedder computes a vector from the content, and combines it with the vector for the state. So a zero never has to stand in for null, or for padding.\n\nrelflow's own test suite checks exactly this. In proof P038, every measurement that's present is exactly zero, and missingness alone decides the label. The model separates the two classes perfectly: an AUC of one. Fill the nulls with zeros before training, and the AUC collapses to one half, a coin flip. A control with random nulls lands at chance too. The information was destroyed before the model ever saw it.\n\nNull and padding are different, too. A null is a real coordinate: the item exists, its quantity is null, and attention can see that. Padding is no coordinate at all. Padded slots are zeroed, and they're excluded from every attention computation and every average. Here's the mask: live tokens attend to each other, and padding never takes part, however much room the branch reserves.\n\nA few more cases, to pin it down. An empty list is valued: there is a list, and it's empty. A null list is not. A label the model has never seen is still valued; only its content is unknown. And a value we hide on purpose gets the fourth state, masked, which is how targets work. We'll get there.\n"
+    },
+    {
+      "id": "numbers",
+      "original_slug": "numbers",
+      "number": 6,
+      "title": "How a number becomes a vector",
+      "page": "data-types/number.qmd",
+      "pages": [
+        "data-types/number.qmd"
+      ],
+      "original_pages": [
+        "data-types/number.qmd"
+      ],
+      "scene": "Numbers",
+      "module": "s06_number",
+      "source": "archive/relflow-0.2.3/s06_number.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:44",
+      "youtube_title": "How a number becomes a vector | relflow, Visualized #6",
+      "description": "Streaming standardization with exactly merged moments, 13 Fourier frequencies, a raw ruler lane for extrapolation, and decoding in standard deviations.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# How a number becomes a vector\n\nStart with one number: a price, say, nineteen ninety-nine. Networks like their inputs near zero, with a spread of about one, so the first step is to standardize: subtract a mean, divide by a standard deviation. But relflow streams its data. It never holds the whole column at once. So each training batch is boiled down to three numbers: how many values, their mean, and their variance. And summaries like these merge exactly. The new mean moves toward the batch's mean in proportion to its size, and the variance gets a correction for how far apart the two means were. After six batches, the running statistics match the exact mean and variance of every value seen, without keeping a single one of them.\n\nNow the standardized value, z, becomes a vector. relflow evaluates sines and cosines of z at thirteen frequencies, each double the last, from pi over 256 up to sixteen pi. The slow ones change gently: they say roughly where z is. The fast ones wiggle many times per unit: they tell apart values that are very close. Read them all off at one value of z, and you get twenty-six numbers: a fingerprint that's different for every value.\n\nWhy bother? Suppose the effect you need to learn is narrow: something special happens right around one value. From z alone, a linear layer can only tilt a line; carving out a bump takes many layers of work. But a plain weighted sum of the sines and cosines already traces the bump closely. The features hand the network the building blocks of sharp effects, from the very first layer.\n\nPeriodic features have one weakness. Outside the range seen in training, they simply repeat. A sine wave has no idea that five is bigger than one. So relflow keeps one more lane. The very last coordinate of a Number's vector is z itself, untouched: a straight ruler for scale, which later layers can add and multiply, even past the values they were trained on.\n\nPut together, a Number's token is the vector for its state, plus a learned projection of the Fourier features through a GELU, plus a straight line in z, with the last lane set to z itself. One safety rail: a value so extreme that the fastest sine would pass ten thousand radians, about 199 standard deviations out, gets clamped. Decoding runs the other way. A Number's decoder predicts a state and a value, and its error is measured in standard deviations, so a field in dollars and a field in days pull on the model equally.\n"
+    },
+    {
+      "id": "vocabulary",
+      "original_slug": "vocabulary",
+      "number": 7,
+      "title": "A vocabulary that grows while it trains",
+      "page": "core-concepts/vocabulary.qmd",
+      "pages": [
+        "core-concepts/vocabulary.qmd",
+        "data-types/category.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/vocabulary.qmd",
+        "data-types/category.qmd"
+      ],
+      "scene": "Vocabulary",
+      "module": "s07_vocabulary",
+      "source": "archive/relflow-0.2.3/s07_vocabulary.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:40",
+      "youtube_title": "A vocabulary that grows while it trains | relflow, Visualized #7",
+      "description": "Category vocabularies that grow while the model trains: worker-local dictionaries, geometric growth, and optimizer state carried across every resize.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# A vocabulary that grows while it trains\n\nCategories are labels: SKUs, merchants, countries. The classic recipe is to scan the whole dataset first, collect every label, and allocate an embedding table of exactly the right size. relflow streams, so it can't scan first. Instead, every Category field learns its vocabulary online. The first time a training batch contains a new label, that label gets the next free row. Labels are never evicted and never renumbered.\n\nThere's a subtlety. Batches are encoded in data-loader worker processes, and a worker can't touch the model. So a worker numbers labels with a dictionary that's local to its own batch: zero, one, two, and so on. Then, in the training process, just before the forward pass, relflow binds those local numbers to the model's vocabulary, admits any new labels, and remaps the batch's tensors. With several GPUs, every rank gathers the batch's new labels in rank order, so all of them admit the same labels in the same order.\n\nAnd when the table runs out of rows, it grows. Here's a real training run in which new merchants keep showing up, three more in every batch. The white dots count the labels admitted. The orange staircase is the storage behind them: one row, then four, eight, sixteen, thirty-two, sixty-four. Each time, the capacity jumps to the next power of two that holds every label, so growing is rare, and cheap on average.\n\nThe tricky part is the optimizer. Adam keeps two running averages for every single parameter: one of its gradient, and one of the gradient squared. Growing the table means replacing the parameter with a bigger one, and a naive swap would throw that history away. relflow copies the old rows, their pending gradients, and Adam's moments into the new storage, and starts the new rows with zero moments, as if they had just been created. We checked this inside the run you just saw. At every growth, the old rows and their moments came through identical, bit for bit, and the new moments were exactly zero.\n\nOnly training admits labels. Validation and testing reuse the mapping, so a label they've never seen stays unknown, and a model being served never learns anything from its requests. An unknown label is still valued, with zero content. To prepare the model for that, relflow hides one percent of known labels during training, by default, so the model learns to lean on the rest of the context when a label tells it nothing.\n"
+    },
+    {
+      "id": "hash",
+      "original_slug": "hash",
+      "number": 8,
+      "title": "Equality without identity",
+      "page": "data-types/hash.qmd",
+      "pages": [
+        "data-types/hash.qmd"
+      ],
+      "original_pages": [
+        "data-types/hash.qmd"
+      ],
+      "scene": "Hashing",
+      "module": "s08_hash",
+      "source": "archive/relflow-0.2.3/s08_hash.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:09",
+      "youtube_title": "Equality without identity | relflow, Visualized #8",
+      "description": "Identifiers that need equality, not identity: salted hash lanes, a new salt every training batch, and the proofs that show where this works and where it doesn't.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Equality without identity\n\nSome values are identifiers: account numbers, device IDs, card numbers. There can be millions of them, and most show up once or twice. A vocabulary row for each one would memorize noise, and would know nothing about the new IDs arriving tomorrow. Often, what matters isn't which ID it is at all, only whether two of them are the same. Did this account just send money to itself?\n\nrelflow's Hash type keeps exactly that, and nothing more. Each ID is hashed to 64-bit integers, in a few independent lanes, scaled to lie between minus one and one. Then the lanes go through sines and cosines at fixed frequencies, straight into model space. There's no learned table at all: the vector is a pure function of the hash.\n\nNow the trick. During training, every batch mixes a fresh random salt into the hash, so the very same account comes out as a completely different vector in the next batch. The model has no stable vector to memorize. But inside one batch, equal IDs always produce identical vectors, in every Hash field at once. Here are the similarities between the seven IDs of one observation, in three batches. The vectors change every time; the pattern of equalities never does. At test and prediction time the salt is zero, so serving is deterministic.\n\nDoes it work? In relflow's proof P021, the answer depends only on whether two IDs match, and every test ID is brand new. Hash scores an AUC of 0.9999. A Category vocabulary, facing IDs it has never seen, can only guess: one half. But equality only helps while the tokens can still attend to each other. In proof P028, two sibling collections are each summarized first, and then compared. The signal is gone: chance. relflow records that one as a limitation. It's why the documentation's Hash example keeps its transfers unsummarized, with reduction set to None.\n"
+    },
+    {
+      "id": "quantile-and-enum",
+      "original_slug": "quantile-and-enum",
+      "number": 9,
+      "title": "Ranks and fixed labels",
+      "page": "data-types/quantile.qmd",
+      "pages": [
+        "data-types/quantile.qmd",
+        "data-types/enum.qmd"
+      ],
+      "original_pages": [
+        "data-types/quantile.qmd",
+        "data-types/enum.qmd"
+      ],
+      "scene": "QuantileEnum",
+      "module": "s09_quantile_enum",
+      "source": "archive/relflow-0.2.3/s09_quantile_enum.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "3:03",
+      "youtube_title": "Ranks and fixed labels | relflow, Visualized #9",
+      "description": "Quantile: a number as its percentile in a learned t-digest, and when that beats standardizing. Enum: labels declared up front, fixed rows, and strict validation.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Ranks and fixed labels\n\nSome numbers are badly behaved. Here are four thousand amounts, spread over five powers of ten, with 8 enormous outliers. A Number field standardizes: subtract the mean, divide by the standard deviation. But those few outliers inflate the standard deviation to about 1,275. So 97 percent of all the amounts land within a tenth of a standard deviation of the mean, squeezed into a sliver, while the outliers sit thirty or forty units away.\n\nQuantile takes a different view. Instead of how far a value is from the mean, it asks where the value ranks among everything seen in training: its percentile, between zero and one. While training, each Quantile field keeps a compact summary of the distribution, a t-digest, stored as Arrow data rather than as rows. Now the typical amounts spread out. Twenty sits at the 32nd percentile; thirty-three, the median; a hundred, the 86th. The outliers can't stretch the scale: they all end near one, and anything past the largest training value is clipped to one.\n\nThen the percentile becomes a vector, much like a Number does: the percentile itself, plus eight sine and cosine pairs at frequencies of one to eight times pi, projected to the model's width and added to a learned vector for the value's state. Predictions come back in the original units: the decoder predicts a percentile, and relflow maps it back through the digest.\n\nSo is Quantile simply better? relflow's proofs say: it depends. When the input is contaminated with outliers, the percentile view predicts typical values more accurately. But percentiles compress the extremes, so in the tails Number wins, and Quantile can never say anything about values beyond the range it learned. A rule of thumb: use Quantile when a value's position matters, and Number when its size does.\n\nLabels have a similar choice. A Category learns its vocabulary while it trains, so new labels can appear at any time. An Enum is for a set you can write down in advance: a customer tier, an order status. Here, a real model trained on data that only ever says bronze or silver. The Enum has all three rows from the start; gold has been seen zero times, but it exists, and can be predicted. A Category reading the same column only learned the two it saw. And an Enum is strict: a value outside the declaration, like platinum, is an error, in training and in prediction. Normalize spellings in a preprocessor, or declare a fallback label.\n\nBut declaring a label doesn't teach the model what it means. In relflow's proof P070, a class held out of training is never predicted correctly at first. Once training continues with its examples, it's learned, and the model's output head never had to change shape.\n"
+    },
+    {
+      "id": "time-vectors-text",
+      "original_slug": "time-vectors-text",
+      "number": 10,
+      "title": "Time, vectors and text",
+      "page": "data-types/dateparts.qmd",
+      "pages": [
+        "data-types/dateparts.qmd",
+        "data-types/vector.qmd",
+        "data-types/text.qmd"
+      ],
+      "original_pages": [
+        "data-types/dateparts.qmd",
+        "data-types/vector.qmd",
+        "data-types/text.qmd"
+      ],
+      "scene": "TimeVectorText",
+      "module": "s10_time_vector_text",
+      "source": "archive/relflow-0.2.3/s10_time_vector_text.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:26",
+      "youtube_title": "Time, vectors and text | relflow, Visualized #10",
+      "description": "DateParts puts calendar positions on circles; Vector projects supplied embeddings; Text runs strings through a frozen Hugging Face encoder and learns how to use the result.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Time, vectors and text\n\nTime has two faces. How long ago something happened is a number. But where it falls in a cycle, the hour, the weekday, the month, is a position on a circle. That's what DateParts encodes. Each part becomes a sine and a cosine, so the hours of a day go around a real circle. On a number line, 23:30 and 1:30 are twenty-two hours apart. On the circle they're neighbors, and noon is on the opposite side.\n\nThere are nine parts to choose from, from the day of the year down to the second of the minute, and you list the ones your task needs. They answer different questions: half past eleven on Thursday and half past twelve on Friday are neighbors by the hour, and a day apart by the weekday. relflow's proofs test both sides: a model recovers the month from the day of the year on years it never trained on, and picking too few parts can leave the answer ambiguous.\n\nSometimes another system has already turned something into numbers: an embedding, or a window of sensor readings. That's a Vector: a fixed number of floats. relflow projects it to the model's width and adds the state. A missing vector gets the null state, not a row of zeros. relflow doesn't rescale vectors, so put them on a sensible scale upstream, and a vector of the wrong length is rejected.\n\nAnd text. A Text field runs each string through a small, frozen language model from Hugging Face. By default it's a two-layer BERT with about 4 million weights, and relflow never trains them. What relflow learns is how to use the result: a projection of the pooled vector, added to the state. Here are four real support messages through the frozen encoder. The two about a missing transfer are the closest pair, at 0.81; the transfer and the password question are farther apart, at 0.67. Text is for meaning that's in the words. relflow doesn't fine-tune the encoder or generate text, and the encoder's files aren't stored in the checkpoint, so ship them with the model.\n\nSo: a position in a cycle is DateParts, and elapsed time is a Number you derive. A vector from another system is a Vector, and meaning in free text is Text. Every one of them gets the same five states as every other field.\n"
+    },
+    {
+      "id": "inside-a-branch",
+      "original_slug": "inside-a-branch",
+      "number": 11,
+      "title": "Inside a branch",
+      "page": "guides/mechanisms/field-interactions.qmd",
+      "pages": [
+        "guides/mechanisms/field-interactions.qmd",
+        "data-types/branch.qmd"
+      ],
+      "original_pages": [
+        "data-types/branch.qmd"
+      ],
+      "scene": "InsideABranch",
+      "module": "s11_branch",
+      "source": "archive/relflow-0.2.3/s11_branch.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:55",
+      "youtube_title": "Inside a branch | relflow, Visualized #11",
+      "description": "Coordinate attention among an item's fields, the unrolled sequence, rotary positions, pre-norm layers, and a real test that the model reads SKUs and quantities as pairs.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Inside a branch\n\nEvery field has been embedded: one vector per field, per slot. Let's step inside a branch, an order's line items, and see what its encoder does with them. Arrange the tokens in a grid: one row per field, one column per slot. This order has five items, so the last three columns are padding.\n\nThe first step is local. The SKU, the quantity and the price of one line item belong together. So each column, separately, goes through one small transformer layer: a sequence of just three tokens, attending only to each other. Afterwards, the SKU token knows its quantity, and the quantity token knows which product it's counting.\n\nNext, the grid is unrolled into a single sequence: all eight SKU slots, then all eight quantities, then all eight prices. Twenty-four positions. A stack of ordinary transformer layers runs across that whole sequence, so now every item can compare itself with every other item in the order.\n\nHow does a token know where it sits? With rotary position embeddings. Every query and every key is rotated by an angle that grows with its position. Rotate both, and the score between two tokens depends only on how far apart they are. Here are real scores from relflow's rotary module, for one query and one key placed at every pair of positions: every diagonal is constant. And look what that buys inside a branch. An item's SKU and its own quantity are always exactly eight positions apart, whichever item it is. So 'my own quantity' is one fixed offset, the same for every item, and attention can learn it once.\n\nEach of those layers is the standard pre-norm block: normalize, attend, add the result back; normalize, feed forward, add back. Padding is zeroed on the way in and on the way out, and it's masked out of every attention. Each branch can also choose how many key and value heads to keep: one per query head, one per pair, one shared by all, or no attention at all.\n\nDoes that pairing really matter? Here's a real test. We trained a small relflow model on synthetic orders, where an order comes back only if it contains a fragile SKU, bought three or more at a time. So S11 times four, next to S07 times one, comes back. Swap the quantities, and it doesn't. On new orders, the model is perfect: an AUC of one. Now take the same test orders and shuffle the quantities among each order's items. Same SKUs, same quantities, wrong pairs. The AUC drops to 0.90. The model wasn't counting SKUs and quantities separately. It was reading them as pairs.\n"
+    },
+    {
+      "id": "packing",
+      "original_slug": "packing",
+      "number": 12,
+      "title": "Don't pay for padding",
+      "page": "guides/performance.qmd",
+      "pages": [
+        "guides/performance.qmd"
+      ],
+      "original_pages": [
+        "guides/performance.qmd"
+      ],
+      "scene": "Packing",
+      "module": "s12_packing",
+      "source": "archive/relflow-0.2.3/s12_packing.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:09",
+      "youtube_title": "Don't pay for padding | relflow, Visualized #12",
+      "description": "Padding costs the answers nothing, but it costs the hardware. Packing gathers live tokens, groups rows by length and attends without masks: timed for real.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Don't pay for padding\n\nPadding costs the model's answers nothing. It isn't free for the hardware. A dense batch is a rectangle: every row is as long as the branch's capacity, whether it's full or not. And attention compares every pair of positions, so its cost grows with the square of that length. In this small real batch, 72 percent of the attention work would be spent on padding.\n\nSo whenever some slots are empty, relflow packs. It gathers the live tokens into one flat list, remembering where each one came from. Then it groups the rows by how many live tokens they have: the three rows with one item together, the two rows with three items together, and so on. Inside a group every row has the same length, so attention runs on a perfect rectangle again, with no mask and no padding at all.\n\nAfterwards, every token is scattered back to its own slot, and the padding is restored as zeros. The rotary positions are the original ones, so the result is the same as the dense computation. We checked: the largest difference is about one part in a million, floating-point rounding.\n\nAnd it's fast. Here's relflow's own packing code, timed on this machine: two encoder layers over 256 rows, with room for 128 tokens each. When rows hold about four live tokens on average, dense attention takes 153 milliseconds; packed, 10. 15 times faster. At twelve tokens it's 7 times faster, and even at thirty-two, a quarter full, packing is three times as fast.\n\nA little fine print. Grouping needs one trip from the GPU back to the host per encoder stack, to read the lengths. Packing steps aside when dropout is active, so the random numbers match the dense schedule exactly, and when anyone has hooked into or replaced the modules, so they keep seeing the dense shapes they expect. And rows with nothing in them at all are skipped entirely, everywhere.\n"
+    },
+    {
+      "id": "softmax-cant-count",
+      "original_slug": "softmax-cant-count",
+      "number": 13,
+      "title": "Why softmax can't count",
+      "page": "guides/mechanisms/branch-reduction.qmd",
+      "pages": [
+        "guides/mechanisms/branch-reduction.qmd",
+        "data-types/branch.qmd"
+      ],
+      "original_pages": [
+        "data-types/branch.qmd"
+      ],
+      "scene": "Reduction",
+      "module": "s13_reduction",
+      "source": "archive/relflow-0.2.3/s13_reduction.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "3:20",
+      "youtube_title": "Why softmax can't count | relflow, Visualized #13",
+      "description": "Learned-query cross-attention summarizes a branch, but softmax weights sum to one, so it can't count. relflow's additive mass and count lanes, tested in three real training runs.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Why softmax can't count\n\nAfter its encoder, a branch still holds one token per field and slot: twenty-four of them, for an order with room for eight items of three fields each. The parent doesn't want twenty-four. It wants a summary. relflow's default reduction is cross-attention from learned queries: a few vectors, trained like any other weights, each of which asks the collection a question, and comes back with a weighted average of the answers. One summary vector per query.\n\nLook closely at those weights. Softmax makes every weight positive, and makes them add up to one. So the output is always an average of the values. And averages have a blind spot: they can't count. One token carrying 1.25 gets all the weight. Six identical tokens split it, a sixth each, and add back up to exactly the same output. To the parent, one item and six items look identical.\n\nLet's watch that happen, for real. Each training record holds a bag of identical amounts, between one and six of them, and the hidden target is their total. Branch attention is switched off, so only the reduction can do the counting. Then we ask each trained model about one copy of 1.25, two copies, and so on, up to ten. First, the plain average reduction, rf dot Mean. It answers 4.37, every time. Next, attention, with two of relflow's lanes removed. 4.23, every time. Both have learned to guess about three and a half times the amount, the average count, because the count itself never reaches them.\n\nSo relflow's reduction adds two lanes that softmax can't provide. The first is mass: the sum of the branch's input tokens, a sum, not an average, scaled down by the square root of the branch's capacity, and sent through a learned projection. The second is a count: the number of present tokens, divided by the capacity, times a learned direction. Both are added to every summary vector, and both start at exactly zero, so the reduction begins life as pure attention and learns how much of each lane to use.\n\nAnd with those lanes switched on, the same model counts. 1.31, 2.59, 3.85, all the way to 7.48 for six copies: right on the line, across the whole range it was trained on. Its typical error on new bags drops from about 1.7 to 0.09. Past six copies, though, our model flattens out. relflow's own proof of this, P002, with a different setup, does stretch somewhat beyond its training lengths, and calls that a bounded extension, not exact arithmetic. The documentation says it plainly: if you need an exact business total, compute it in preprocessing.\n\nSo a branch has three ways to report to its parent. The default: a fixed number of learned summaries, with the mass and count lanes. rf dot Mean: one plain average. Cheap, but as we've just seen, it forgets how many. Or reduction equals None, which passes every encoded slot straight up, so items stay distinct, at the price of a longer sequence in the parent.\n"
+    },
+    {
+      "id": "climbing-the-tree",
+      "original_slug": "climbing-the-tree",
+      "number": 14,
+      "title": "Climbing the tree",
+      "page": "guides/mechanisms/tree-routing.qmd",
+      "pages": [
+        "guides/mechanisms/tree-routing.qmd",
+        "core-concepts/model-tree.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/model-tree.qmd"
+      ],
+      "scene": "Routing",
+      "module": "s14_routing",
+      "source": "archive/relflow-0.2.3/s14_routing.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "1:43",
+      "youtube_title": "Climbing the tree | relflow, Visualized #14",
+      "description": "The customer model bottom up: the shapes at every hand-off and the depth-first execution plan.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Climbing the tree\n\nLet's run a whole model, the customer model with its orders and line items, and follow the shapes from the leaves up. Every field has been embedded into vectors of width 256. The deepest branch runs first. For each of a customer's 64 orders, the line items encoder sees 16 SKU slots and 16 quantity slots: 32 tokens. It encodes them, and reduces them to four summary vectors, the medium preset's number of outputs. All 64 orders are processed at once, as one big batch.\n\nThose four vectors are routed up into the orders branch, as if they were four more fields of each order. So every order contributes its age, plus four line-item summaries: five tokens, times 64 orders, is 320 tokens. The orders encoder runs across all of them, so an order can be compared with every other order, and reduces them to four vectors per customer.\n\nFinally, the root. Its sequence is the tenure, the four order summaries, and a slot for each of the two targets, which stay empty, because they're masked: seven slots in all. Three layers of attention, the deepest stack in the model, and a last reduction gives the customer's four root vectors.\n\nThat's relflow's execution plan: branches grouped by depth and run deepest first, each one waiting only for its own children. And every hand-off between levels is just a reshape: the item axis folds into the order axis, and the order axis into the customer. Nothing is copied out to Python along the way.\n"
+    },
+    {
+      "id": "decoders",
+      "original_slug": "decoders",
+      "number": 15,
+      "title": "Asking the tree a question",
+      "page": "guides/prediction-output.qmd",
+      "pages": [
+        "guides/prediction-output.qmd"
+      ],
+      "original_pages": [
+        "guides/prediction-output.qmd"
+      ],
+      "scene": "Decoders",
+      "module": "s15_decoders",
+      "source": "archive/relflow-0.2.3/s15_decoders.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "1:32",
+      "youtube_title": "Asking the tree a question | relflow, Visualized #15",
+      "description": "Decoders read the tree back down: heritage paths, target-shaped learned queries, and a head and loss for every datatype.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Asking the tree a question\n\nIn a relflow model, encoders carry information up the tree, from the leaves to the root. Decoders read it back down. Each target's decoder looks at the representations along its own path to the root: its heritage. For churned, that's simply the root's four vectors. For a field deep in the tree, like a line item's SKU, it's the root, the order summaries, the item summaries of every order, and the field's own slots.\n\nThe decoder doesn't average its heritage. It lays it out as one long memory, and it brings learned queries of its own, shaped like the target: a single query for churned, or one for each of the 64 times 16 item slots, for SKU. Each query cross-attends into the memory and pulls out what it needs. And before it does, each query is nudged by the visible siblings at its own coordinate. When the decoder predicts an item's SKU, the query for that slot starts out knowing the item's quantity.\n\nThen a small head for each datatype. Every decoder predicts the five-way state, so the model can say that a value will be null. A Number adds a value, a Boolean a probability, and a Category a distribution over the labels it has discovered so far. The loss adds the state's cross-entropy and the content's own loss, counted only on the coordinates selected for reconstruction, and each field's total can be weighted.\n"
+    },
+    {
+      "id": "masks",
+      "original_slug": "masks",
+      "number": 16,
+      "title": "One mask, many objectives",
+      "page": "core-concepts/dynamic-masking.qmd",
+      "pages": [
+        "core-concepts/dynamic-masking.qmd"
+      ],
+      "original_pages": [
+        "core-concepts/dynamic-masking.qmd"
+      ],
+      "scene": "Masks",
+      "module": "s16_masks",
+      "source": "archive/relflow-0.2.3/s16_masks.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "3:15",
+      "youtube_title": "One mask, many objectives | relflow, Visualized #16",
+      "description": "One mechanism for targets, dropout, self-supervision and ablation: learned masks versus skipping, branch-level masks, deterministic SHA-256 sampling, and what each stage does.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# One mask, many objectives\n\nIn relflow, every objective comes from one mechanism: the mask. A mask selects some values, hides them from the encoder, and, if you ask, makes the model reconstruct them. That one idea gives you supervised targets, dropout, self-supervised pretraining, and ablations.\n\nHere are the policies you'll actually write. mask equals True makes a supervised target: the value is never embedded, and always reconstructed. mask equals 0.15 is training-only dropout: fifteen percent of values hide behind a learned mask token. Add skip equals True, and they're removed instead. A Mask with a rate and reconstruct equals True is self-supervised learning: hide a sample, and learn to predict it from the rest. A Mask with a query lets a Boolean column in the data decide, and a mask on a branch makes one decision for its entire subtree.\n\nHere's what that means for one real batch: the quantities of eight orders, 40 items in all. As an ordinary input, every item's quantity is a visible token. With mask equals 0.25, about a quarter of them, 9 here, are swapped for a learned mask vector. They're still tokens in the sequence, so the model knows something is hidden there. Add skip equals True, and the selected values are removed instead: they leave attention entirely, as if those items had no quantity at all. And mask equals True skips every quantity, always. That's a target: the model never sees it, and learns to predict it.\n\nPut the mask on the branch instead, and one decision covers the whole subtree. A selected line item loses its SKU, its quantity and its price together, and any branches nested inside it. A mask on the root does the same for whole observations.\n\nSampling is deterministic. Every coordinate gets a score from a random generator seeded by a SHA-256 hash of the seed, the stage, the epoch, the field's address and the policy. Here are real selections at a fifteen percent rate, on a batch of orders. Epoch zero picks the same coordinates every time you run it. Epoch one picks fresh ones. And validation always pretends it's epoch zero, so a validation score means the same thing from one epoch to the next.\n\nAnd the stages differ. Dropout only acts during training. A fixed target is hidden everywhere: that's what makes it a prediction. And a sampled reconstruction trains its decoder, and is measured during validation, but asks for no predictions when the model is serving.\n\nrelflow's proof catalog checks this machinery directly. A model trained to reconstruct sampled values gets its error down to about a tenth of a constant guess, and loses it all when the context is shuffled. Hide one of two branches that both carry the answer, and nothing is lost; hide both, and the model falls back to guessing, as it should. And in every case, changing a hidden value changes nothing the model sees. Next: what masks make possible, learning without labels.\n"
+    },
+    {
+      "id": "legacy-pretraining",
+      "original_slug": "pretraining",
+      "number": 17,
+      "title": "Learning without labels",
+      "page": "guides/pretraining.qmd",
+      "pages": [
+        "guides/pretraining.qmd"
+      ],
+      "original_pages": [
+        "guides/pretraining.qmd"
+      ],
+      "scene": "Pretraining",
+      "module": "s17_pretraining",
+      "source": "archive/relflow-0.2.3/s17_pretraining.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:58",
+      "youtube_title": "Learning without labels | relflow, Visualized #17",
+      "description": "Learning without labels: pretrain by reconstructing hidden values, fine-tune with a few labels, and a real comparison against training from scratch.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Learning without labels\n\nLabels are expensive. Records usually aren't: for every order someone labeled, there may be a hundred that nobody did. Masks let a model learn from those too. Hide a sample of the values that are already there, and ask the model to reconstruct them from everything else. Here, fifteen percent of SKUs and prices, picked fresh every epoch. There's no label in this schema at all.\n\nHere's a synthetic shop with 200 products, secretly arranged in 8 groups. Each order buys mostly from one group. An order comes back if it holds a group-A product bought three or more at a time. And group A costs about the same as group B, so the price can't give it away. To predict returns, a model has to learn which products are in group A. We have 20,000 orders without labels, and only a few with them.\n\nAfter six epochs of pretraining on those unlabeled orders, what has it learned? Asked to name a hidden SKU, it gets 2.9 percent right. That sounds poor, but a random guess gets 0.5, and even a model that knew each product's group perfectly, but not which item, would get about 3. It has learned the groups. You can see it in the SKU embedding table: products from the same group point in similar directions, and products from different groups don't. Nobody told it the groups existed.\n\nFine-tuning takes a few lines. Load the pretrained model, turn the reconstructed fields back into ordinary inputs, add the label you care about as a new target, give it an optimizer, and fit, exactly as before. Weights whose names and shapes still match carry over; the new decoder starts fresh.\n\nNow the real comparison. Same architecture, same test orders, same three hundred training steps; the only difference is where the weights start. From scratch, a model trained on a handful of labeled orders does all right, and improves as labels grow. The pretrained model is ahead at every budget up to 512. With 64 labeled orders, test AUC goes from 0.77 to 0.89. Part of the reason: with so few labels, many products never appear at all, so a model trained from scratch has never seen them. The pretrained one has, in thousands of orders. And by 1,024 labels, the two meet. Pretraining was a head start, not a higher ceiling.\n\nA few habits keep this honest. Always compare against the same task trained from scratch, as we did. Don't pretrain on the customers or the time period you'll test on. Remember that vocabularies and normalizers keep learning while you fine-tune. And with large vocabularies, measure coverage, how many targets the model can even name, alongside accuracy.\n"
+    },
+    {
+      "id": "processors",
+      "original_slug": "processors",
+      "number": 18,
+      "title": "Before and after the model",
+      "page": "guides/preprocessors.qmd",
+      "pages": [
+        "guides/preprocessors.qmd",
+        "guides/postprocessors.qmd"
+      ],
+      "original_pages": [
+        "guides/preprocessors.qmd",
+        "guides/postprocessors.qmd"
+      ],
+      "scene": "Processors",
+      "module": "s18_processors",
+      "source": "archive/relflow-0.2.3/s18_processors.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:31",
+      "youtube_title": "Before and after the model | relflow, Visualized #18",
+      "description": "Polars preprocessors reshape records before the schema applies; postprocessors turn predictions into application output. A real model trained through both.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Before and after the model\n\nA model only sees what its schema describes, and data rarely arrives in exactly that shape. relflow gives you two hooks. A preprocessor runs before the schema is applied: an ordinary Polars function that can rename, derive, filter, join, or reshape. A postprocessor runs after prediction, and turns relflow's prediction table into whatever your application needs.\n\nHere's a real transfer as it arrives. The two accounts sit in a struct, under payer and payee, and the amount is in cents. The preprocessor is ten lines of Polars. It converts cents to an amount, and turns the two named accounts into a repeated list of parties, each with an account and a role. Why bother? Now both accounts share one account field, so the model learns about account-004 once, whichever side it's on, and the role tells it which side that was.\n\nThe schema describes the processed shape: a repeated branch of exactly two parties, an amount, and a hidden flag. The preprocessor goes on the data module, and runs on every batch, in every split. The rule to learn: flag a transfer if the money goes to one of eight watched accounts, or if it's over two and a half thousand. On two thousand new transfers, it's right 99.95 percent of the time. Every transfer to a watched account is flagged, and none of the transfers merely sent from one. The role came through the reshape.\n\nOn the way out, relflow returns a prediction table: the columns you chose to keep, and a predictions struct with a state, a value and an inferred flag for every target. A postprocessor reshapes that for your application. This one keeps the transfer ID, pulls out the probability, and applies a review threshold, a business rule that belongs to you, not to the model. Here's the real output for four new transfers: an ordinary one, one to a watched account, one from a watched account, and a large one.\n\nThe same two functions plug into every path: training, direct prediction, batch jobs that write Parquet, and an HTTP deployment. Three things to remember. Processors aren't stored in the model file, so pass them again when you predict. By default they run on each partition as it streams; ask for the dataset scope only when a transform needs the whole split, which then has to fit in memory. And keep a key, like the transfer ID, because a filter or a join can change which rows come out.\n"
+    },
+    {
+      "id": "watching-it-learn",
+      "original_slug": "watching-it-learn",
+      "number": 19,
+      "title": "Watching it learn",
+      "page": "guides/evaluation.qmd",
+      "pages": [
+        "guides/evaluation.qmd",
+        "core-concepts/embeddings.qmd"
+      ],
+      "original_pages": [
+        "guides/evaluation.qmd",
+        "core-concepts/embeddings.qmd"
+      ],
+      "scene": "RealRun",
+      "module": "s19_real_run",
+      "source": "archive/relflow-0.2.3/s19_real_run.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:36",
+      "youtube_title": "Watching it learn | relflow, Visualized #19",
+      "description": "A real training run, its reduction attention read out head by head, exported embeddings, and the prediction envelope.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# Watching it learn\n\nLet's watch a real model learn. Here's the schema: orders with up to eight line items, each with a SKU, a quantity and a price, and one hidden Boolean: was the order returned? The rule, which the model never sees: an order comes back if it contains a fragile SKU, S03 or S11, bought three or more at a time.\n\nWe train on four thousand synthetic orders, on this machine's processor. The whole run takes about 5 seconds. The loss falls fast, and by the end of the second epoch, validation AUC has reached one, and it stays there. On two thousand fresh test orders, it ranks every returned order above every kept one. At a fifty percent threshold, 52 of them still land on the wrong side.\n\nBut how does it decide? We can open up the line items branch, and recompute the attention weights of its learned summary query. Here's an order that came back: S11, four at a time, in the fifth slot. Two of the four heads put essentially all of their weight on one single token: the SKU of exactly that item. And thanks to coordinate attention, that SKU token already knows its own quantity. Here's a second returned order, with the fragile item in the first slot: the same two heads go straight to that item again, though one of them now reads its quantity token rather than its SKU.\n\nAnd here are two orders that were kept. Each one contains a fragile SKU, but bought only once. There's no single decisive item, and the attention spreads out and wanders: over quantities, over other products. The model says no, with 99 percent confidence.\n\nBecause we set embed equals True, the model also exports its root vector for every order. Project six hundred test orders onto their two main directions, and the returned orders sit cleanly apart from the kept ones, along the very first direction. That vector is what a downstream model, or a nearest-neighbor search, would use.\n\nAnd predictions come back as an Arrow table. For every address: a probability for each state, the decoded content, and a flag saying whether the value was inferred. Exported embeddings sit at their own addresses. In a batch job, a writer callback streams each batch of predictions straight to Parquet, so nothing piles up in memory.\n"
+    },
+    {
+      "id": "benchmarks",
+      "original_slug": "benchmarks",
+      "number": 20,
+      "title": "What it costs: time and memory",
+      "page": "guides/performance.qmd",
+      "pages": [
+        "guides/performance.qmd"
+      ],
+      "original_pages": [
+        "guides/performance.qmd"
+      ],
+      "scene": "Benchmarks",
+      "module": "s20_benchmarks",
+      "source": "archive/relflow-0.2.3/s20_benchmarks.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:40",
+      "youtube_title": "What it costs: time and memory | relflow, Visualized #20",
+      "description": "Training and inference speed and peak memory for every preset, CPU against the M1's GPU, and what longer contexts cost: measured on a laptop.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# What it costs: time and memory\n\nWhat does a relflow model cost? Here's a measurement on the computer that rendered this video: an Apple M1 laptop with 16 gigabytes of memory. The model is the customer model from the getting started guide: orders with line items, and two targets, built at each of the five sizes. Each batch is 64 synthetic customers with about ten orders each. Every number is the median of several batches after a warm-up, and memory is the peak of a fresh process.\n\nHere are all five presets. The extra-small one has about 540 thousand parameters and trains on 476 customers a second. The medium preset, 12 million parameters, trains on 94 customers a second, predicts for 263, and peaks at 2.1 gigabytes while training. The extra-large one, 69 million parameters, is about 26 times slower than extra-small. Note the floor: around 498 megabytes is just Python, PyTorch and relflow, before any model exists.\n\nLightning picks the GPU automatically when there is one, and on a Mac that's the M1's GPU. Is it faster? Here are three of the presets, training and predicting, on each. The CPU wins 5 of the 6. The medium model trains 1.8 times faster on the CPU. The GPU only edges ahead training the extra-large model: it pays off once each operation is big enough to cover the cost of launching it. So on a laptop like this, try accelerator equals CPU, and measure, rather than assume.\n\nWhat about context length? Keep the same customers, but give the orders branch more and more room: from 16 slots up to 256, each with sixteen item slots inside. Sixteen times the room costs 2.7 times the time, and 2.2 times the memory. Attention skips the empty slots, but the batch is still built as full rectangles before it's packed, so the cost still grows, just far more slowly than the room does. Padding is cheap, not free: give a branch the room your data needs, not more.\n\nThese are one laptop's numbers on synthetic data, so treat them as a starting point. For your own workload, time the whole job, from reading the data to writing predictions. Let Lightning find a batch size, train in bfloat16 on hardware that supports it, try compiling the encoders, and keep it only if it helps, and ask only for the outputs you need.\n"
+    },
+    {
+      "id": "proofs",
+      "original_slug": "proofs",
+      "number": 21,
+      "title": "What the proofs show, and what they don't",
+      "page": "proofs.qmd",
+      "pages": [
+        "proofs.qmd"
+      ],
+      "original_pages": [
+        "proofs.qmd"
+      ],
+      "scene": "Evidence",
+      "module": "s21_evidence",
+      "source": "archive/relflow-0.2.3/s21_evidence.py",
+      "level": "advanced",
+      "state": "historical",
+      "source_version": "0.2.3",
+      "source_commit": "5077716",
+      "duration": "2:21",
+      "youtube_title": "What the proofs show, and what they don't | relflow, Visualized #21",
+      "description": "relflow's proof catalog: what passes, what is limited, what is still missing, and a recap of the series.",
+      "youtube_id": null,
+      "beats": [],
+      "transcript_body": "# What the proofs show, and what they don't\n\nHow do we know any of this works, beyond a few demos? relflow ships its own evidence: a catalog of 78 proofs, small controlled experiments that each test one learning claim, with controls designed to fail when the claim is false. They're empirical tests, not mathematical proofs, and the catalog says so. 55 are marked passing, 13 limited, and 10 partial. In the latest recorded runs, seven of them missed their own gates, and that's recorded too.\n\nA few highlights. Counts can survive nesting: six equal amounts, grouped into sessions in different ways, and the model recovers ninety-one percent of the true difference between the groupings. Reconstruction can spot contradictions: records where every field looks normal on its own, but the combination is wrong, get flagged with an AUC of 0.96, where any single field gives chance. And calendar features pick up phase: the month, from the day of the year, at 92 percent, against ten percent with the days shuffled.\n\nAnd the limits are recorded just as carefully. Comparing identities across two collections that have each been summarized fails, as the hashing episode showed. Admitting a brand-new label in the middle of training activates a random row, which can jolt predictions before it has learned anything, and the obvious fixes made other proofs worse, so they weren't adopted. And combining two familiar instructions in a pairing never seen in training works on some seeds, but not reliably yet.\n\nSo, the journey of one batch. Nested Arrow records are laid into fixed rectangles by a single placement rule, with a state beside every value. Each field becomes vectors in its own way: Fourier features and a ruler for numbers, a growing table for labels, a salted hash for identities. Each branch lets an item's fields talk, then lets its items talk, with the padding packed away, and reports to its parent with summaries that can still count. And decoders reach back down the tree, to fill in whatever the masks have hidden.\n\nThe schema you write is the network you get. Thanks for watching.\n\n---\n\n8215 words (~53 min at 155 wpm).\n"
+    }
+  ]
+}

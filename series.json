@@ -1,0 +1,547 @@
+{
+  "schema": 1,
+  "series": "RelFlow, Visualized",
+  "target": {
+    "version": "0.2.4",
+    "commit": "5fc8ce8388909823b61e1e60f9184d3373969c0d",
+    "repository": "https://github.com/relflow/relflow",
+    "state": "working-tree",
+    "contract_commit": "8d9d6cfd8ce22a7819c2b5392c710d4f2cbe1a7c",
+    "source_hashes": {
+      "src/relflow/architecture/root.py": "64b4f2c936839a6514a5ad508f1bdc8be556fa4f4d0d55539fd61ad4aa9ea40d",
+      "src/relflow/architecture/runtime.py": "3fe231ec2d8379919f3444744dd113ea066c57fde77ef134381d41999f23c021",
+      "src/relflow/architecture/mutations.py": "2db5d37cab757e8867318fe5b2e12c8f12b9cb73e386c53eaa432290ac8e27dd",
+      "src/relflow/architecture/graph.py": "e39331ca6479a6d0a2d51f6526e0dd4a1e59fb6c61b063e7b8a8603241cad6ae",
+      "src/relflow/structs/structure.py": "f7599ffdf3d31b0b956ceda4104024713614a5f894f73985273dd70833408e28",
+      "src/relflow/structs/tree.py": "d22ceabb5038970050a8bb5646b90618c37dc0b0f108d97f1565b87f1e28d66e",
+      "src/relflow/data/datasets/arrow.py": "c8eb94ab495376e3fb1c776c6b55b2139b9e8d879ae91109def17cde05417b26",
+      "src/relflow/data/query.py": "cafc5fdf997f157a554083ea33641124c295e10f3ace36a8cf82b5c7172eb665",
+      "src/relflow/tensorfields/output.py": "71e76d0a56e37593e3381f627e36497784d231a4beae10fe8fbd4dcde5e5d3d4",
+      "src/relflow/tensorfields/base.py": "4607ec46e1bdd11c9b996401521bd2f8c3d58686b0b1276f35c44497e136c9ac",
+      "src/relflow/tensorfields/extensions/boolean.py": "3493a9bffa8b3b02963f1e5ca3e920325bed3756e8890359a66c41f9d7222138",
+      "src/relflow/presets/builtins.py": "cc6af3919ae947a180b012cba16ae11503d0512c3d37f37c83b69af4c1050ca3"
+    }
+  },
+  "docs_base": "https://relflow.github.io/docs/",
+  "segments": [
+    {
+      "id": "first-model",
+      "title": "Your First Model",
+      "page": "getting-started.qmd",
+      "scene": "FirstModel",
+      "level": "intro",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "One payment, one question",
+          "narration": "Start with a payment for eighty-four fifty at North Market. We want to predict whether it will later be disputed. The amount and merchant are available now; the dispute outcome arrives later.",
+          "visual": "record",
+          "lines": [
+            "amount: 84.50",
+            "merchant: North Market",
+            "disputed: false"
+          ]
+        },
+        {
+          "title": "Describe the fields",
+          "narration": "Describe that record with a small RelFlow model. Number handles the amount, Category handles the merchant, and Boolean handles the yes-or-no outcome. The parent keywords give each field its name.",
+          "visual": "code",
+          "lines": [
+            "import relflow as rf",
+            "",
+            "model = rf.Model.xs(",
+            "    amount=rf.Number,",
+            "    merchant=rf.Category,",
+            "    disputed=rf.Boolean(mask=True),",
+            ")"
+          ]
+        },
+        {
+          "title": "Keep the answer out of the input",
+          "narration": "The important option is mask equals true. The observed dispute label supplies the training answer, but its content never becomes an input. The model must learn from evidence available before that outcome.",
+          "visual": "mask",
+          "lines": [
+            "amount + merchant: visible evidence",
+            "disputed: hidden from model inputs",
+            "observed label: training answer"
+          ]
+        },
+        {
+          "title": "Train, then ask about a new payment",
+          "narration": "Train on earlier payments and validate on a later period. For a new request, supply amount and merchant and omit disputed. Next, add earlier transactions to give this same prediction more context.",
+          "visual": "flow",
+          "lines": [
+            "Earlier labeled payments: train",
+            "Later labeled payments: validate",
+            "New payment: amount + merchant",
+            "Predict the dispute outcome"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transaction-history",
+      "title": "Add Transaction History",
+      "page": "tutorials/transaction-history.qmd",
+      "scene": "TransactionHistory",
+      "level": "intro",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "The payment has a past",
+          "narration": "A payment often makes more sense beside earlier transactions from the same account. Add a recent transactions list to the record. Each transaction keeps its age, amount, and merchant together as one historical event.",
+          "visual": "history",
+          "lines": [
+            "Current: 84.50 at North Market",
+            "recent_transactions:",
+            "  7 days ago: 32.00 at Station Cafe",
+            "  1 day ago: 56.20 at North Market"
+          ]
+        },
+        {
+          "title": "Describe repeated records",
+          "narration": "A Branch describes those repeated records. Its children describe the values in each transaction. Add this named branch to the payment model; amount, merchant, and the hidden dispute target stay at the payment level.",
+          "visual": "code",
+          "lines": [
+            "recent_transactions = rf.Branch(",
+            "    length=32,",
+            "    overflow=\"tail\",",
+            "    days_ago=rf.Number,",
+            "    amount=rf.Number,",
+            "    merchant=rf.Category,",
+            ")"
+          ]
+        },
+        {
+          "title": "Keep the most recent history",
+          "narration": "Prepare history in oldest-to-newest order. Length thirty-two caps the collection, and tail keeps the last thirty-two supplied records when it overflows. An account with no earlier transactions has an empty history list.",
+          "visual": "history",
+          "lines": [
+            "Oldest transaction -> newest transaction",
+            "length=32: retain at most 32 records",
+            "overflow=\"tail\": keep the latest records",
+            "No previous transactions: []"
+          ]
+        },
+        {
+          "title": "Respect the prediction moment",
+          "narration": "Every historical record must already be known before the current payment. Sorting and that cutoff belong in application preparation. Training and prediction use the same nested shape; prediction requests still omit only the dispute target.",
+          "visual": "flow",
+          "lines": [
+            "Known earlier transactions",
+            "Current payment: prediction moment",
+            "Later dispute outcome: training answer",
+            "Use the same preparation for every split"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "binding-data",
+      "title": "Binding Data",
+      "page": "core-concepts/binding-data.qmd",
+      "scene": "BindingData",
+      "level": "intro",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Names connect schema and records",
+          "narration": "RelFlow reads the names and nesting declared in the schema. Amount reads the current payment amount; merchant reads its merchant. The recent transactions branch reads the list, and each child reads within its own transaction.",
+          "visual": "tree",
+          "lines": [
+            "payment",
+            "  amount: 86.50",
+            "  merchant: grocery",
+            "  recent_transactions: repeated records",
+            "    days_ago, amount, merchant"
+          ]
+        },
+        {
+          "title": "Keep application metadata",
+          "narration": "A record can also carry application metadata such as a payment identifier. Extra columns do not become model inputs automatically. Keep them for preparation or retain them with predictions when your application needs to match results back.",
+          "visual": "record",
+          "lines": [
+            "payment_id: payment-42",
+            "amount: 86.50",
+            "merchant: grocery",
+            "disputed: false"
+          ]
+        },
+        {
+          "title": "Prepare the shape before binding",
+          "narration": "When source names or shapes differ, use queries or preprocessing deliberately. Preparation can rename fields, derive ages, join history, and apply the time cutoff. A missing required input is a binding error; an explicit null follows its field contract.",
+          "visual": "flow",
+          "lines": [
+            "Application source tables",
+            "Rename, derive, join, and filter",
+            "Payment record with earlier history",
+            "Bind names and nested fields"
+          ]
+        },
+        {
+          "title": "Supply your prepared Arrow splits",
+          "narration": "Pass independent, application-supplied Arrow tables to the data module. Those records supply observed dispute labels for training and validation. Prediction uses the same preparation, with the directly bound supervised target omitted from new requests.",
+          "visual": "code",
+          "lines": [
+            "data = rf.ArrowDataModule(",
+            "    model=model,",
+            "    train=train_payments,",
+            "    validate=validation_payments,",
+            ")"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "training",
+      "title": "Training And Checkpoints",
+      "page": "guides/lightning.qmd",
+      "scene": "Training",
+      "level": "intro",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Learn from earlier payments",
+          "narration": "Start with the payment model and its hidden dispute target. Prepare independent training and validation splits from your application. Earlier payments teach the model; later observations help select the model state to keep.",
+          "visual": "flow",
+          "lines": [
+            "Earlier payments: training split",
+            "Later payments: validation split",
+            "Both contain observed dispute labels"
+          ]
+        },
+        {
+          "title": "Connect the data module",
+          "narration": "The Arrow data module connects those prepared tables to the model. It does not invent application records or evaluation boundaries. Keep the schema, history cutoff, and preparation consistent across both supplied splits.",
+          "visual": "code",
+          "lines": [
+            "data = rf.ArrowDataModule(",
+            "    model=model,",
+            "    train=train_table,",
+            "    validate=validation_table,",
+            ")"
+          ]
+        },
+        {
+          "title": "Configure the run on fit",
+          "narration": "Set batch size and AdamW options on fit. Batch size is per device. Early stopping and rollback monitor validation loss by default, and fitting returns with the best validation checkpoint restored. These settings are starting choices to evaluate.",
+          "visual": "code",
+          "lines": [
+            "model.fit(",
+            "    data,",
+            "    batch_size=128,",
+            "    learning_rate=1e-4,",
+            "    weight_decay=0.01,",
+            "    max_epochs=30,",
+            ")"
+          ]
+        },
+        {
+          "title": "Distinguish a new fit from a resumed run",
+          "narration": "Each ordinary fit binds a fresh optimizer to the current parameters; supply any scheduler for that run. Save an artifact for model state. Full continuation, including optimizer and loop progress, requires a full checkpoint passed through checkpoint path.",
+          "visual": "flow",
+          "lines": [
+            "Ordinary fit: fresh optimization state",
+            "Model.save: schema and learned model state",
+            "Full checkpoint + ckpt_path: resume a run",
+            "Supply runtime configuration again"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "predictions",
+      "title": "Prediction Output",
+      "page": "guides/prediction-output.qmd",
+      "scene": "Predictions",
+      "level": "intro",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Ask about an unseen outcome",
+          "narration": "After training, request a prediction for a payment whose dispute outcome is unknown. Supply the fields visible at payment time and omit disputed. The payment identifier is application metadata, useful for connecting the answer to its request.",
+          "visual": "record",
+          "lines": [
+            "payment_id: payment-42",
+            "amount: 86.50",
+            "merchant: grocery"
+          ]
+        },
+        {
+          "title": "Return an Arrow table",
+          "narration": "Predict returns an Arrow table with inputs and predictions columns. Retain explicitly selects processed source columns to copy into inputs. Without postprocessing, each output row corresponds to one processed observation; retention does not change model inputs.",
+          "visual": "code",
+          "lines": [
+            "# request_table is supplied by your application.",
+            "result = model.predict(",
+            "    request_table,",
+            "    retain=(\"payment_id\",),",
+            ")"
+          ]
+        },
+        {
+          "title": "Read the target by its address",
+          "narration": "Inside predictions, the literal slash-prefixed field disputed identifies this target. Its content contains the probability of true. The code selects nested Arrow struct fields rather than treating the output as a flat column of labels.",
+          "visual": "code",
+          "lines": [
+            "import pyarrow.compute as pc",
+            "",
+            "disputed = pc.struct_field(result[\"predictions\"], \"/disputed\")",
+            "content = pc.struct_field(disputed, \"content\")",
+            "probability = pc.struct_field(content, \"probability\")"
+          ]
+        },
+        {
+          "title": "Read the flags with the value",
+          "narration": "State describes value-state probabilities, and inferred says reconstruction was requested at that position. It is not a confidence score. This schematic shows placeholders instead of measured predictions; choose application decisions and evaluate their quality on held-out observations.",
+          "visual": "prediction",
+          "lines": [
+            "inputs: {payment_id: payment-42}",
+            "predictions:",
+            "  /disputed:",
+            "    state: <value-state probabilities>",
+            "    content: {probability: <probability of true>}",
+            "    inferred: true"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "title": "Model Tree",
+      "page": "core-concepts/model-tree.qmd",
+      "scene": "Structure",
+      "level": "advanced",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "One observation has a tree",
+          "narration": "The schema describes one observation. A payment has ordinary amount and merchant fields, a repeated history branch, and a dispute target. Each historical transaction keeps its own age, amount, and merchant together at the same position.",
+          "visual": "tree",
+          "lines": [
+            "payment: one observation",
+            "  amount + merchant: current inputs",
+            "  recent_transactions: repeated context",
+            "    days_ago + amount + merchant",
+            "  disputed: hidden supervised target"
+          ]
+        },
+        {
+          "title": "Context follows the structure",
+          "narration": "The history branch builds context from those transactions. The root combines that context with the current payment. Tree connections describe ownership and information structure; application preparation performs the database joins that assembled this observation.",
+          "visual": "flow",
+          "lines": [
+            "Each transaction: aligned fields",
+            "History branch: combine earlier evidence",
+            "Payment root: combine current and past",
+            "Dispute decoder: predict from context"
+          ]
+        },
+        {
+          "title": "Names become addresses",
+          "narration": "Parent keywords name the children. The root itself is anonymous, at slash; payment is only the diagram label. Construct nested addresses with one argument per component. Addresses identify schema locations in predictions, metrics, and schema edits.",
+          "visual": "code",
+          "lines": [
+            "root = rf.Address()",
+            "history_amount = rf.Address(",
+            "    \"recent_transactions\",",
+            "    \"amount\",",
+            ")",
+            "# /recent_transactions/amount"
+          ]
+        },
+        {
+          "title": "Choose a practical history limit",
+          "narration": "The example caps history at thirty-two records and keeps the tail of oldest-to-newest input. This is an application choice, separate from model size. Repeated fields and their padding still cost memory, so evaluate capacity with realistic histories.",
+          "visual": "history",
+          "lines": [
+            "length=32: hard cap on retained history",
+            "overflow=\"tail\": keep the latest records",
+            "Model size and collection size are separate",
+            "Repeated fields and padding consume memory"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "masking",
+      "title": "Masking And Reconstruction",
+      "page": "core-concepts/dynamic-masking.qmd",
+      "scene": "Masking",
+      "level": "advanced",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Visibility and learning are separate choices",
+          "narration": "A mask controls what the model can see and what it learns to predict. Those are separate effects. For a supervised dispute target, mask equals true hides the input content and uses its observed value as the training answer.",
+          "visual": "mask",
+          "lines": [
+            "Visible evidence: amount + merchant + history",
+            "Hidden input: disputed",
+            "Training answer: observed disputed value",
+            "mask=True: supervised target"
+          ]
+        },
+        {
+          "title": "Dropout does not create an objective",
+          "narration": "A floating-point mask rate supplies training-only input dropout. Without reconstruction, hiding an amount does not ask the model to predict it. The fifteen-percent rate shown here is an illustrative configuration choice, not a measured performance result.",
+          "visual": "code",
+          "lines": [
+            "model = rf.Model.xs(",
+            "    amount=rf.Number(mask=0.15),",
+            "    merchant=rf.Category,",
+            "    disputed=rf.Boolean(mask=True),",
+            ")"
+          ]
+        },
+        {
+          "title": "Request sampled reconstruction explicitly",
+          "narration": "An explicit Mask with reconstruct equals true adds an objective for selected observed values. The remaining visible context must explain the hidden amount. Fractional reconstruction samples during training and evaluation, but is inactive during ordinary prediction.",
+          "visual": "code",
+          "lines": [
+            "amount = rf.Number(",
+            "    mask=rf.Mask(",
+            "        rate=0.15,",
+            "        reconstruct=True,",
+            "    ),",
+            ")"
+          ]
+        },
+        {
+          "title": "Choose learned masking or structural removal",
+          "narration": "A learned mask keeps a present coordinate while hiding its value. Skip removes that input representation from encoder attention. Reconstruction still keeps the pristine answer for loss. Branch policies share a decision across descendants; selectors can target particular records.",
+          "visual": "mask",
+          "lines": [
+            "Learned mask: hide value, retain coordinate",
+            "skip=True: omit the input representation",
+            "reconstruct=True: learn the hidden answer",
+            "Branch policy: share selection with descendants"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "embeddings",
+      "title": "Learning Modes And Embeddings",
+      "page": "core-concepts/embeddings.qmd",
+      "scene": "Embeddings",
+      "level": "advanced",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Export learned context",
+          "narration": "An embedding is a numeric representation of learned context. Set embed equals true at the model root to export the payment representation. The hidden dispute target still supplies the learning objective; exporting a vector creates no objective by itself.",
+          "visual": "code",
+          "lines": [
+            "model = rf.Model.xs(",
+            "    embed=True,",
+            "    amount=rf.Number,",
+            "    merchant=rf.Category,",
+            "    disputed=rf.Boolean(mask=True),",
+            ")"
+          ]
+        },
+        {
+          "title": "Choose the location deliberately",
+          "narration": "You can also export a history branch summary or a leaf's pooled decoder context. With the extra-small preset's single reduction output, a history branch export gives one summary per payment, rather than one vector per transaction.",
+          "visual": "embedding",
+          "lines": [
+            "Root: payment context",
+            "History branch: reduced history context",
+            "Leaf: pooled decoder context",
+            "xs history export: one summary per payment"
+          ]
+        },
+        {
+          "title": "Read the root representation",
+          "narration": "Prediction output stores requested embeddings at schema addresses. Slash selects the anonymous root, and embedding selects its vector. Exported vectors are float thirty-two and normalized along their feature axis; an all-zero vector remains zero.",
+          "visual": "code",
+          "lines": [
+            "import pyarrow.compute as pc",
+            "",
+            "predictions = model.predict(payments)[\"predictions\"]",
+            "payment_embedding = pc.struct_field(",
+            "    pc.struct_field(predictions, \"/\"),",
+            "    \"embedding\",",
+            ")"
+          ]
+        },
+        {
+          "title": "Evaluate the downstream use",
+          "narration": "A good dispute predictor does not establish good similarity or clustering. Evaluate embeddings on the application task and preserve the trained schema and state. Supervised labels and sampled reconstruction can both teach context; choose the learning signal explicitly.",
+          "visual": "flow",
+          "lines": [
+            "Choose a learning objective",
+            "Train the payment context",
+            "Export requested representations",
+            "Evaluate the intended downstream task"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pretraining",
+      "title": "Pretraining And Fine-Tuning",
+      "page": "guides/pretraining.qmd",
+      "scene": "Pretraining",
+      "level": "advanced",
+      "youtube_id": null,
+      "beats": [
+        {
+          "title": "Learn from records without task labels",
+          "narration": "Pretraining is optional. Historical amounts and merchants can provide their own supervision before dispute labels exist. Hide selected observed values, then learn to reconstruct them from remaining context. Keep held-out accounts and future observations out of training.",
+          "visual": "flow",
+          "lines": [
+            "Records without dispute labels",
+            "Hide selected historical values",
+            "Reconstruct them from visible context",
+            "Keep the same evaluation boundaries"
+          ]
+        },
+        {
+          "title": "Use a reconstruction policy",
+          "narration": "Put an explicit reconstruction mask on historical fields, then fit with independent Arrow splits and save the model artifact. This fifteen-percent sampling rate is illustrative configuration, not a performance claim. Plain dropout would create no pretraining objective.",
+          "visual": "code",
+          "lines": [
+            "sampled = rf.Mask(rate=0.15, reconstruct=True)",
+            "recent_transactions = rf.Branch(",
+            "    length=32,",
+            "    overflow=\"tail\",",
+            "    days_ago=rf.Number,",
+            "    amount=rf.Number(mask=sampled),",
+            "    merchant=rf.Category(mask=sampled),",
+            ")"
+          ]
+        },
+        {
+          "title": "Adapt the saved model to disputes",
+          "narration": "Load the artifact, remove sampled reconstruction from historical inputs, and add the hidden dispute target. Compatible state transfers; the new target starts freshly initialized. Keep existing addresses and geometry stable when reusing the learned model.",
+          "visual": "code",
+          "lines": [
+            "finetuned = rf.Model.load(\"artifacts/payment-pretrained.rf\")",
+            "reconstructed_inputs = rf.where(\"address\").is_in([",
+            "    rf.Address(\"recent_transactions\", \"amount\"),",
+            "    rf.Address(\"recent_transactions\", \"merchant\"),",
+            "])",
+            "finetuned.update(reconstructed_inputs, mask=False)",
+            "finetuned.extend(",
+            "    rf.where(\"address\") == rf.Address(),",
+            "    disputed=rf.Boolean(mask=True),",
+            ")"
+          ]
+        },
+        {
+          "title": "Start a new optimization run",
+          "narration": "Fine-tune on labeled splits with a fresh optimizer and any scheduler supplied for this run. This is a new task, not full checkpoint continuation. Compare against supervised training from scratch on the same held-out task; pretraining does not guarantee improvement.",
+          "visual": "flow",
+          "lines": [
+            "Pretrained model state + new dispute target",
+            "Labeled Arrow splits: a new fit",
+            "Fresh optimizer for current parameters",
+            "Compare with training from scratch"
+          ]
+        }
+      ]
+    }
+  ]
+}

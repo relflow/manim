@@ -1,0 +1,21 @@
+[project]
+name = "relflow-manim"
+version = "0.1.0"
+description = "Independent Manim animations for the RelFlow documentation"
+requires-python = ">=3.12,<3.13"
+dependencies = ["manim==0.20.1", "imageio-ffmpeg==0.6.0"]
+
+[dependency-groups]
+dev = ["pytest==9.0.3", "ruff==0.15.14"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["archive"]
+lint.extend-select = ["I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
